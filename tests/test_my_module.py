@@ -41,3 +41,18 @@ def test_string_concatenation():
 def test_string_failure():
     assert "hello" + " world" == "HELLO WORLD" # Denne test vil fejle
 
+def test_zero_division():
+    # Denne test crasher ved division med nul
+    _ = 1 / 0  # Dette vil forårsage en ZeroDivisionError
+
+def test_list_membership():
+    lst = [1, 2, 3, 4, 5]
+    assert 3 in lst  # Denne test vil passere
+    assert 6 in lst  # Denne test vil fejle
+
+def test_dictionary_access():
+    d = {'a': 1, 'b': 2}
+    assert d['a'] == 1  # Denne test vil passere
+    assert d['b'] == 2  # Denne test vil passere
+    assert d['c'] == 3  # Denne test vil crashe med KeyError
+
