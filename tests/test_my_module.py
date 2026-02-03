@@ -34,3 +34,10 @@ def test_crash_list_index():
     # Denne test crasher ved at tilgå et ugyldigt indeks i en liste
     lst = [1, 2, 3]
     _ = lst[5]  # Dette vil forårsage en IndexError
+
+def test_string_concatenation():
+    assert "hello".upper() + " world".upper() == "HELLO WORLD" # Denne test vil passere
+
+def test_string_failure():
+    assert "hello" + " world" == "HELLO WORLD" # Denne test vil fejle
+

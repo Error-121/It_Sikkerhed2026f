@@ -7,7 +7,7 @@
             "command": "cls; python -m pytest -v -s",
             "problemMatcher": [],
             "group": {
-                "kind": "test",
+                "kind": "build",
                 "isDefault": true
             }
         },
