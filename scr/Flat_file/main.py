@@ -1,6 +1,6 @@
 import json, os
 from dataclasses import asdict
-from user import User
+from scr.Flat_file.user import User
 
 class Flat_file:
     def __init__(self, file_path="scr/Local_DB/users.json"):
