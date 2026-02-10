@@ -9,7 +9,7 @@ Emne der er udvalgt for opgaven er Passwords
 
 de regler jeg bruger i opgaven er at længden på password skal være mellem 8–25. det skal inde holde mindst 1 stort bogstav, 1 lille bogstav, 1 ciffer, 1 symbol samt ingen mellemrum.
 
-### *Ækvivalens*
+#### *Ækvivalens*
 du opsætter regler for opsættelsen af et nyt password f.eks længde mellem 8 og 25 tegn, der skal være et antal specialtegn idet osv.
 
 | **Passwords** | resultat | hvorfor?               |
@@ -23,7 +23,7 @@ du opsætter regler for opsættelsen af et nyt password f.eks længde mellem 8 o
 | Abcdef12      | fejler   | mangler specialtegn    |
 | Abc def1!     | fejler   | mangler har mellem rum |
 
-### *Grænseværdi*
+#### *Grænseværdi*
 for længde reglen bliver der 7, 8 , 9 samt 24, 25, 26 testet hvor 8 og 25 er min og max på længden
 
 | **Passwords** | resultat | hvorfor?             |
@@ -34,7 +34,7 @@ for længde reglen bliver der 7, 8 , 9 samt 24, 25, 26 testet hvor 8 og 25 er mi
 | Aa1! + a*20   | består   | er max               |
 | Aa1! + a*20   | fejler   | er for lang          |
 
-### *GRUD(L)*
+#### *GRUD(L)*
 med GRUD test ser vi på hvordan systement arbejder med password.
 
 i test for __ tjekker vi
@@ -53,7 +53,7 @@ kan man fjerne password fra systemet
 List:
 kan admin hente en liste af brugere og deres password
 
-### *Cycle-process-test*
+#### *Cycle-process-test*
 her tester vi fulde livscyklusser af password 
 
 Exemplar:
@@ -71,7 +71,7 @@ Når en bruger ændre password
     4. Den gamle adgangskode "Abcdef1!" virker ikke længere
     5. Den nye adgangskode "NewPass2@" virker
 
-### *Test Pyramiden*
+#### *Test Pyramiden*
 
 unit test:(Grænseværdi og Ækvivalens høre til her)
 her teste ting som reglerne for passwords som f.eks Grænseværdi og Ækvivalens. der her vi laver flest test da de er relativt hurtige at gennem føre
@@ -83,7 +83,7 @@ End to End Test:(Cycle-process-test høre til her)
 her testets hele systemet og alle måde man kan bruge for at password på. men det tager længere tid og kræver flest recurser
 
 
-### *Decision Table test*
+#### *Decision Table test*
 | Length 8–25 | Uppercase | Lowercase | Digit | Symbol | No Spaces | Result | Example |
 |---|---|---|---|---|---|---|---|
 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | PASS | Abcdef1! |
@@ -95,3 +95,39 @@ her testets hele systemet og alle måde man kan bruge for at password på. men d
 | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ | FAIL | Abc1! |
 | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ | FAIL | A*24 + a1! |
 | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | FAIL | weakpass |
+
+
+### **Flat File**
+
+#### *hvorfor er det smart at bruge en flat_file_db*
+En flat file database muliggør hurtig prototyping og test af dataadgang uden afhængighed af en fuldt opsat databaseserver. Den reducerer kompleksitet i udviklingsfasen, eliminerer behovet for migrations og eksterne services, før der introduceres en egentlig database.
+
+#### *Screenshot af mine unit test af flat_file_db*
+![FLAT File Test](screenshot/Flat-File%201%202026-02-10_15-43.png)
+
+##### *Risici:*
+test_create_user_success - Hvis denne test fejler, kan systemet ikke oprette nye brugere, hvilket blokerer for registrering af nye konti.
+
+test_get_user_by_id_success - Hvis denne test fejler, kan systemet ikke hente brugerdata, hvilket forhindrer login og visning af brugerprofiler.
+
+test_get_user_by_id_not_found - Hvis denne test fejler, kan systemet returnere forkerte data eller crashe når der søges efter ikke-eksisterende brugere.
+
+test_get_all_users - Hvis denne test fejler, kan administratorer ikke se en liste over alle brugere, hvilket begrænser brugeradministration.
+
+test_get_all_users_empty_database - Hvis denne test fejler, kan systemet crashe når databasen er tom, hvilket forhindrer opstart af nye installationer.
+
+test_update_user_first_name - Hvis denne test fejler, kan brugere ikke ændre deres fornavn, hvilket begrænser opdatering af brugeroplysninger.
+
+test_update_user_multiple_fields - Hvis denne test fejler, kan brugere ikke opdatere flere felter samtidig, hvilket gør profilopdateringer ineffektive.
+
+test_update_user_not_found - Hvis denne test fejler, kan systemet crashe eller overskrive forkerte data når der opdateres ikke-eksisterende brugere.
+
+test_enable_user - Hvis denne test fejler, kan deaktiverede brugerkonti ikke genaktiveres, hvilket forhindrer gendannelse af adgang.
+
+test_disable_user - Hvis denne test fejler, kan suspenderede eller problematiske brugere ikke deaktiveres, hvilket skaber sikkerhedsrisici.
+
+test_delete_user_success - Hvis denne test fejler, kan brugere ikke slettes fra systemet, hvilket forhindrer overholdelse af GDPR og datahåndtering.
+
+test_delete_user_not_found - Hvis denne test fejler, kan systemet crashe eller give fejl når der forsøges at slette ikke-eksisterende brugere.
+
+test_delete_all_users - Hvis denne test fejler, kan databasen ikke ryddes, hvilket komplicerer test-miljøer og systemvedligeholdelse.
