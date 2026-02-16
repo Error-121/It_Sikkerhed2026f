@@ -131,3 +131,62 @@ test_delete_user_success - Hvis denne test fejler, kan brugere ikke slettes fra 
 test_delete_user_not_found - Hvis denne test fejler, kan systemet crashe eller give fejl når der forsøges at slette ikke-eksisterende brugere.
 
 test_delete_all_users - Hvis denne test fejler, kan databasen ikke ryddes, hvilket komplicerer test-miljøer og systemvedligeholdelse.
+
+### **Flat File 2: Kryptering og Hasing**
+
+#### *Valg af Algoritmer*
+
+**Hashing (Password):**
+- **Tilgængelige:** bcrypt, scrypt, PBKDF2, Argon2
+- **Valgt:** Argon2id
+- **Hvorfor:** Argon2id vandt Password Hashing Competition 2015 og er i dag den mest anbefalede standard. Den er mere modstandsdygtig over for GPU-baserede angreb end bcrypt og kombinerer beskyttelse mod både side-channel og timing attacks. Argon2id bruges af Microsoft, Google og anbefales af OWASP.
+
+**Kryptering (PII-data):**
+- **Tilgængelige:** AES-128, AES-256, ChaCha20, RSA
+- **Valgt:** Fernet (AES-128 i CBC mode med HMAC)
+- **Hvorfor:** Fernet er en symmetrisk kryptering der automatisk håndterer IV-generering, message authentication og padding. Dette reducerer risikoen for implementeringsfejl. For et flat-file system er symmetrisk kryptering mere praktisk end asymmetrisk (RSA), da vi både skal kryptere og dekryptere data fra samme application.
+
+#### *Hvornår Krypteres Data*
+
+Data krypteres **ved oprettelse og opdatering** af brugere:
+- **Personlige oplysninger (PII):** `first_name`, `last_name`, `address`, `street_number` krypteres med Fernet før de gemmes i JSON-filen
+- **Password:** Hashes med Argon2 (envejskryptering) ved oprettelse og når bruger ændrer password
+
+**Hvorfor:** GDPR kræver "passende tekniske foranstaltninger" til beskyttelse af persondata (Artikel 32). Kryptering sikrer at data er ulæselig hvis JSON-filen kompromitteres. Password hashing betyder at selv systemadministratorer ikke kan se brugerens plaintext password.
+
+#### *Hvornår Dekrypteres Data*
+
+Data dekrypteres kun **on-demand** når det er nødvendigt:
+- **Visning af brugerprofil:** Når en bruger ser deres egen profil dekrypteres PII-felterne
+- **Admin-funktioner:** Når admin skal se brugeroplysninger
+- **Export:** Ved GDPR-anmodninger om dataudtræk (right to data portability)
+
+**Hvorfor:** Princippet om "data minimization" - vi holder data krypteret så længe som muligt og dekrypterer kun når der er et legitimt behov. Password dekrypteres **aldrig** fordi det er hashed (envejskryptering).
+
+#### *Hvornår Fjernes Dekrypteret Data*
+
+Dekrypteret data fjernes fra hukommelsen **umiddelbart efter brug**:
+- **Efter visning:** Når `decrypt_user()` funktionen returnerer data til UI, slettes den dekrypterede kopi når funktionen afsluttes (Python garbage collection)
+- **Efter opdatering:** Når PII-felter opdateres, krypteres de nye værdier med det samme og plaintext slettes
+- **Mellem requests:** I en web-applikation ville dekrypteret data kun eksistere i varigheden af et HTTP-request
+
+**Hvorfor:** Jo kortere tid dekrypteret data eksisterer i hukommelsen, jo mindre er risikoen for at det bliver eksponeret ved memory dumps, debugging eller andre angreb. Dette følger "defense in depth" princippet.
+
+#### *Andre Sikkerhedshensyn*
+
+**Nøglehåndtering:**
+- Krypteringsnøglen gemmes i separat fil (`secret.key`) og skal beskyttes med filsystem-rettigheder
+- I produktion bør nøglen gemmes i en dedikeret key management service (Azure Key Vault, AWS KMS)
+- Nøglen må **aldrig** committes til source control (.gitignore)
+
+**Compliance:**
+- **GDPR Artikel 17:** `delete_user()` funktionen sikrer "right to erasure" - sletter både krypteret og hashet data permanent
+- **GDPR Artikel 32:** Brug af state-of-the-art kryptering (Argon2, Fernet) opfylder kravet om "appropriate technical measures"
+- **GDPR Artikel 25:** "Privacy by design" - data er krypteret by default, ikke som opt-in
+
+**Begrænsninger i Flat File:**
+- Hele JSON-filen skal læses for at finde én bruger (ikke optimal for store datasets)
+- Ingen audit log - vi ved ikke hvem der har dekrypteret data hvornår
+- Single encryption key for alle brugere (produktion bør bruge per-user keys eller envelope encryption)
+- Mangler key rotation mekanisme
+

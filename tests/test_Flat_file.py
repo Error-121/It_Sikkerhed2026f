@@ -1,7 +1,8 @@
 import pytest
 import os, json
 from scr.Flat_file.main import Flat_file
-from scr.Mock_Data.mock_user import all_mock_users, mock_user_1, mock_user_2, mock_user_3, mock_user_4
+from scr.Flat_file.user import User
+from scr.Mock_Data.mock_user import all_mock_users, all_mock_users_plaintext, mock_user_1_plaintext, mock_user_2_plaintext, mock_user_3_plaintext, mock_user_4_plaintext
 
 # ==================== Test Setup ====================
 
@@ -18,15 +19,15 @@ def setup_test_db():
     # Given: Opret test database
     db = Flat_file(file_path=TEST_DB_PATH)
     
-    # Tilføj alle mock brugere til databasen
-    for mock_user in all_mock_users:
+    # Tilføj alle mock brugere til databasen (de er allerede krypteret)
+    for plaintext in all_mock_users_plaintext:
         db.create_user(
-            first_name=mock_user.first_name,
-            last_name=mock_user.last_name,
-            address=mock_user.address,
-            street_number=mock_user.street_number,
-            password=mock_user.password,
-            enabled=mock_user.enabled
+            first_name=plaintext["first_name"],
+            last_name=plaintext["last_name"],
+            address=plaintext["address"],
+            street_number=plaintext["street_number"],
+            password=plaintext["password"],
+            enabled=plaintext["enabled"]
         )
     
     # Returner database objektet til testen
@@ -81,12 +82,20 @@ def test_create_user_success(empty_test_db):
         enabled=True
     )
     
-    # Then: Brugeren er oprettet med korrekte værdier
+    # Then: Brugeren er oprettet med korrekte værdier (dekrypter for at verificere)
     assert new_user is not None
-    assert new_user.first_name == "Test"
-    assert new_user.last_name == "User"
     assert new_user.user_id == 1
     assert new_user.enabled == True
+    
+    # Dekrypter PII data for at verificere
+    decrypted = db.decrypt_user(new_user.user_id)
+    assert decrypted["first_name"] == "Test"
+    assert decrypted["last_name"] == "User"
+    assert decrypted["address"] == "Test Street"
+    assert decrypted["street_number"] == "999"
+    
+    # Verificer password hash
+    assert User.verify_password(new_user.password, "TestPass123!")
 
 # ==================== READ Tests ====================
 
@@ -98,11 +107,13 @@ def test_get_user_by_id_success(setup_test_db):
     # When: Vi henter en bruger med ID 1
     user = db.get_user(1)
     
-    # Then: Vi får den korrekte bruger tilbage
+    # Then: Vi får den korrekte bruger tilbage (dekrypter for at verificere)
     assert user is not None
     assert user.user_id == 1
-    assert user.first_name == mock_user_1.first_name
-    assert user.last_name == mock_user_1.last_name
+    
+    decrypted = db.decrypt_user(user.user_id)
+    assert decrypted["first_name"] == mock_user_1_plaintext["first_name"]
+    assert decrypted["last_name"] == mock_user_1_plaintext["last_name"]
 
 
 def test_get_user_by_id_not_found(setup_test_db):
@@ -153,10 +164,12 @@ def test_update_user_first_name(setup_test_db):
     # When: Vi opdaterer fornavn for bruger 1
     updated_user = db.update_user(1, first_name="UpdatedName")
     
-    # Then: Brugerens fornavn er opdateret
+    # Then: Brugerens fornavn er opdateret (dekrypter for at verificere)
     assert updated_user is not None
-    assert updated_user.first_name == "UpdatedName"
-    assert updated_user.last_name == mock_user_1.last_name  # Andre felter er uændrede
+    
+    decrypted = db.decrypt_user(updated_user.user_id)
+    assert decrypted["first_name"] == "UpdatedName"
+    assert decrypted["last_name"] == mock_user_1_plaintext["last_name"]  # Andre felter er uændrede
 
 
 def test_update_user_multiple_fields(setup_test_db):
@@ -172,11 +185,28 @@ def test_update_user_multiple_fields(setup_test_db):
         address="New Address"
     )
     
-    # Then: Alle angivne felter er opdateret
-    assert updated_user.first_name == "NewFirst"
-    assert updated_user.last_name == "NewLast"
-    assert updated_user.address == "New Address"
-    assert updated_user.street_number == mock_user_2.street_number  # Uændret
+    # Then: Alle angivne felter er opdateret (dekrypter for at verificere)
+    decrypted = db.decrypt_user(updated_user.user_id)
+    assert decrypted["first_name"] == "NewFirst"
+    assert decrypted["last_name"] == "NewLast"
+    assert decrypted["address"] == "New Address"
+    assert decrypted["street_number"] == mock_user_2_plaintext["street_number"]  # Uændret
+
+
+def test_update_user_password(setup_test_db):
+    """Test opdatering af brugerens password"""
+    # Given: En database med mock brugere
+    db = setup_test_db
+    
+    # When: Vi opdaterer password for bruger 1
+    new_password = "NewSecurePass123!"
+    updated_user = db.update_user(1, password=new_password)
+    
+    # Then: Password er opdateret og hashet korrekt
+    assert updated_user is not None
+    assert User.verify_password(updated_user.password, new_password)
+    # Gammelt password virker ikke længere
+    assert not User.verify_password(updated_user.password, mock_user_1_plaintext["password"])
 
 
 def test_update_user_not_found(setup_test_db):
